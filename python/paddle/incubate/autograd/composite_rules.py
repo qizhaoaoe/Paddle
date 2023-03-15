@@ -195,14 +195,16 @@ def mean_composite(x, axis, keepdim):
 @REGISTER_COMPOSITE('expand_v2')
 def expand_v2_composite(x, shape):
     """
-    define composite rule of op expnad_v2, expand_v2->expand
+    define composite rule of op expand_v2, expand_v2->expand
     repeat_times = shape / x.shape
     out = tile(x, repeat_times = repeat_times)
     """
     shape_in = x.shape
     dim_out = len(shape)
     dim_in = len(shape_in)
-    assert dim_in <= dim_out and dim_out >= 0
+    assert (
+        dim_in <= dim_out and dim_out >= 0
+    ), "Expected len(shape) >= len(shape_in) and len(shape) >= 0"
     repeat_times = []
     for i in range(dim_out):
         offset = dim_out - i
@@ -210,11 +212,18 @@ def expand_v2_composite(x, shape):
         size_in = shape_in[dim] if dim >= 0 else 1
         size_out = shape[i]
         if size_out == -1:
-            assert dim >= 0
+            assert (
+                dim >= 0
+            ), "Expected len(shape_in) - len(shape) + i >= 0 if shape[i] == -1"
             repeat = 1
         else:
-            assert size_out % size_in == 0
+            assert (
+                size_out % size_in == 0
+            ), "Expected shape[i] to be divided exactly by shape_in[i]."
             repeat = int(size_out / size_in)
+            assert not (
+                repeat > 1 and size_in > 1
+            ), f"Expected shape[i] == shape_in[i], but received shape[i]:{size_out} != shape_in[i]:{size_in}.]"
         repeat_times.append(repeat)
     if dim_in < dim_out:
         shape_in_expand = []
@@ -229,17 +238,21 @@ def expand_v2_composite(x, shape):
 @REGISTER_COMPOSITE('expand_as_v2')
 def expand_as_v2_composite(x, y, target_shape):
     """
-    define composite rule of op expnad_as_v2, expand_as_v2->expand_as
+    define composite rule of op expand_as_v2, expand_as_v2->expand_as
     repeat_times = target_shape / x.shape
     out = tile(x, repeat_times = repeat_times)
     """
     shape_in = x.shape
     if y is not None:
         target_shape = y.shape
-    assert target_shape is not None
+    assert (
+        target_shape is not None
+    ), "y and target_shape should not be None in the same time"
     dim_out = len(target_shape)
     dim_in = len(shape_in)
-    assert dim_in <= dim_out and dim_out >= 0
+    assert (
+        dim_in <= dim_out and dim_out >= 0
+    ), "Expected len(target_shape) >= len(shape_in) and len(target_shape) >= 0"
     repeat_times = []
     for i in range(dim_out):
         offset = dim_out - i
@@ -247,11 +260,18 @@ def expand_as_v2_composite(x, y, target_shape):
         size_in = shape_in[dim] if dim >= 0 else 1
         size_out = target_shape[i]
         if size_out == -1:
-            assert dim >= 0
+            assert (
+                dim >= 0
+            ), "Expected len(shape_in) - len(target_shape) + i >= 0 if target_shape[i] == -1"
             repeat = 1
         else:
-            assert size_out % size_in == 0
+            assert (
+                size_out % size_in == 0
+            ), "Expected target_shape[i] to be divided exactly by shape_in[i]."
             repeat = int(size_out / size_in)
+            assert not (
+                repeat > 1 and size_in > 1
+            ), f"Expected target_shape[i] == shape_in[i], but received target_shape[i]:{size_out} != shape_in[i]:{size_in}.]"
         repeat_times.append(repeat)
     if dim_in < dim_out:
         shape_in_expand = []
